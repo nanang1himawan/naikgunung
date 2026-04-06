@@ -1,0 +1,267 @@
+{
+  "inventory": {
+    "TEKTOK": [
+      {
+        "id": "tk1",
+        "name": "Hydropack",
+        "price": 10000
+      },
+      {
+        "id": "tk2",
+        "name": "Hydropack Green Forest",
+        "price": 15000
+      },
+      {
+        "id": "tk3",
+        "name": "Trekkingpole Raiko",
+        "price": 5000
+      },
+      {
+        "id": "tk4",
+        "name": "Trekkingpole Naturehike",
+        "price": 8000
+      },
+      {
+        "id": "tk5",
+        "name": "Headlamp (Biasa)",
+        "price": 5000
+      },
+      {
+        "id": "tk6",
+        "name": "Headlamp (Premium)",
+        "price": 10000
+      },
+      {
+        "id": "tk7",
+        "name": "Jaket Gorpcore (Biasa)",
+        "price": 10000
+      },
+      {
+        "id": "tk8",
+        "name": "Jaket Gorpcore (Premium)",
+        "price": 15000
+      },
+      {
+        "id": "tk9",
+        "name": "Sepatu Hiking",
+        "price": 15000
+      },
+      {
+        "id": "tk10",
+        "name": "Sepatu Trailrun",
+        "price": 25000
+      }
+    ],
+    "CAMP": [
+      {
+        "id": "c1",
+        "name": "Tenda 2P",
+        "price": 25000
+      },
+      {
+        "id": "c2",
+        "name": "Tenda 4P (Standar)",
+        "price": 30000
+      },
+      {
+        "id": "c3",
+        "name": "Tenda 4P (Premium)",
+        "price": 40000
+      },
+      {
+        "id": "c4",
+        "name": "Tenda 6-7P",
+        "price": 70000
+      },
+      {
+        "id": "c5",
+        "name": "Carrier",
+        "price": 20000
+      },
+      {
+        "id": "c6",
+        "name": "Matras (Spon)",
+        "price": 5000
+      },
+      {
+        "id": "c7",
+        "name": "Matras (Foil/Premium)",
+        "price": 12000
+      },
+      {
+        "id": "c8",
+        "name": "Sleeping Bag",
+        "price": 10000
+      },
+      {
+        "id": "c9",
+        "name": "Kompor",
+        "price": 10000
+      },
+      {
+        "id": "c10",
+        "name": "Gas",
+        "price": 12000
+      }
+    ],
+    "AKSESORIS": [
+      {
+        "id": "a1",
+        "name": "Kursi Lipat",
+        "price": 10000
+      },
+      {
+        "id": "a2",
+        "name": "Meja Lipat",
+        "price": 15000
+      },
+      {
+        "id": "a3",
+        "name": "HT",
+        "price": 35000
+      }
+    ],
+    "KELOMPOK": [
+      {
+        "id": "k1",
+        "name": "Nesting Set (Panci)",
+        "price": 15000
+      },
+      {
+        "id": "k2",
+        "name": "Flysheet 3x4",
+        "price": 15000
+      },
+      {
+        "id": "k3",
+        "name": "P3K Set",
+        "price": 10000
+      },
+      {
+        "id": "k4",
+        "name": "Jerigen Lipat",
+        "price": 5000
+      },
+      {
+        "id": "k5",
+        "name": "Lampu Tenda",
+        "price": 10000
+      },
+      {
+        "id": "k6",
+        "name": "Trash Bag",
+        "price": 5000
+      }
+    ]
+  },
+  "participants": [
+    {
+      "id": 0,
+      "name": "Nanang",
+      "rentals": [
+        {
+          "item": {
+            "id": "a3",
+            "name": "HT",
+            "price": 35000
+          },
+          "qty": 1
+        },
+        {
+          "item": {
+            "id": "a2",
+            "name": "Meja Lipat",
+            "price": 15000
+          },
+          "qty": 1
+        },
+        {
+          "item": {
+            "id": "c3",
+            "name": "Tenda 4P (Premium)",
+            "price": 40000
+          },
+          "qty": 1
+        },
+        {
+          "item": {
+            "id": "c6",
+            "name": "Matras (Spon)",
+            "price": 5000
+          },
+          "qty": 2
+        }
+      ],
+      "isPaid": false
+    },
+    {
+      "id": 1,
+      "name": "Leo",
+      "rentals": [
+        {
+          "item": {
+            "id": "c3",
+            "name": "Tenda 4P (Premium)",
+            "price": 40000
+          },
+          "qty": 1
+        }
+      ],
+      "isPaid": false
+    },
+    {
+      "id": 2,
+      "name": "Dito",
+      "rentals": [],
+      "isPaid": false
+    },
+    {
+      "id": 3,
+      "name": "Junan",
+      "rentals": [],
+      "isPaid": false
+    },
+    {
+      "id": 4,
+      "name": "Galeh",
+      "rentals": [],
+      "isPaid": false
+    },
+    {
+      "id": 5,
+      "name": "Novri",
+      "rentals": [],
+      "isPaid": false
+    },
+    {
+      "id": 6,
+      "name": "Dhimas",
+      "rentals": [],
+      "isPaid": false
+    },
+    {
+      "id": 7,
+      "name": "Eca",
+      "rentals": [],
+      "isPaid": false
+    },
+    {
+      "id": 8,
+      "name": "Triyas",
+      "rentals": [],
+      "isPaid": false
+    },
+    {
+      "id": 9,
+      "name": "Ilham",
+      "rentals": [],
+      "isPaid": false
+    },
+    {
+      "id": 10,
+      "name": "KELOMPOK (Patungan)",
+      "rentals": [],
+      "isPaid": false
+    }
+  ]
+}

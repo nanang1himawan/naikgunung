@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manajemen Sewa Alat Gunung</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        forest: {
+                            50: '#f2fcf5',
+                            100: '#e1f8e8',
+                            200: '#c3eed3',
+                            300: '#94ddb1',
+                            400: '#5fc489',
+                            500: '#3aa769',
+                            600: '#2a8551',
+                            700: '#236a43',
+                            800: '#1f5437',
+                            900: '#1a452e',
+                            950: '#0e271a',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #0e271a; }
+        ::-webkit-scrollbar-thumb { background: #2a8551; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #3aa769; }
+        .hide-scroll::-webkit-scrollbar { display: none; }
+        .hidden { display: none !important; }
+    </style>
+</head>
+
+<body class="bg-forest-950 text-slate-200 font-sans min-h-screen relative">
+    
+    <!-- Loader -->
+    <div id="loader" class="fixed inset-0 bg-forest-950 z-50 flex flex-col items-center justify-center transition-opacity duration-300">
+        <div class="w-10 h-10 border-4 border-forest-600 border-t-forest-400 rounded-full animate-spin"></div>
+        <p class="mt-4 text-forest-300">Memuat data...</p>
+    </div>
+
+    <!-- Header & Dashboard Stats -->
+    <header class="sticky top-0 z-20 bg-forest-900/90 backdrop-blur shadow-lg border-b border-forest-800">
+        <div class="max-w-7xl mx-auto px-4 py-4">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div class="flex items-center gap-3">
+                    <div class="p-2 bg-forest-600 rounded-lg text-white">
+                        <i data-lucide="tent"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-xl font-bold text-white leading-tight">CampRent.</h1>
+                        <p class="text-xs text-forest-300">Manajemen Alat Gunung</p>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-2 w-full md:w-auto">
+                    <!-- Basic Export -->
+                    <button onclick="exportToWA()" class="flex-1 md:flex-none flex items-center justify-center gap-2 bg-orange-500 hover:bg-orange-400 text-white px-4 py-2 rounded-lg font-medium transition-colors text-sm">
+                        <i data-lucide="clipboard-copy" class="w-4 h-4"></i> Export
+                    </button>
+
+                    <!-- Kelola Inventory (Admin Only) -->
+                    <button onclick="openInventoryModal()" id="btn-inventory" class="admin-only hidden flex-1 md:flex-none flex items-center justify-center gap-2 bg-forest-700 hover:bg-forest-600 text-white px-4 py-2 rounded-lg font-medium transition-colors text-sm">
+                        <i data-lucide="backpack" class="w-4 h-4"></i> Barang
+                    </button>
+
+                    <!-- Tambah Peserta (Admin Only) -->
+                    <button onclick="openParticipantModal()" id="btn-add-participant" class="admin-only hidden flex-1 md:flex-none flex items-center justify-center gap-2 bg-forest-600 hover:bg-forest-500 text-white px-4 py-2 rounded-lg font-medium transition-colors text-sm">
+                        <i data-lucide="user-plus" class="w-4 h-4"></i> Peserta
+                    </button>
+
+                    <!-- Login/Logout Admin -->
+                    <div id="auth-controls" class="ml-2 border-l border-forest-700 pl-4">
+                        <button onclick="openLoginModal()" id="btn-login" class="flex items-center gap-2 bg-forest-800 hover:bg-forest-700 border border-forest-600 text-white px-3 py-2 rounded-lg font-medium transition-colors text-sm">
+                            <i data-lucide="lock" class="w-4 h-4"></i> Admin
+                        </button>
+                        <button onclick="logoutAdmin()" id="btn-logout" class="hidden flex items-center gap-2 bg-red-900 hover:bg-red-800 border border-red-700 text-white px-3 py-2 rounded-lg font-medium transition-colors text-sm">
+                            <i data-lucide="log-out" class="w-4 h-4"></i> Keluar
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stats Bar -->
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-4 mt-6 mb-2">
+                <div class="bg-forest-800/50 p-3 rounded-lg border border-forest-700">
+                    <p class="text-xs text-forest-300 mb-1">Total Tagihan</p>
+                    <p class="text-lg md:text-xl font-bold text-white" id="stat-total">Rp 0</p>
+                </div>
+                <div class="bg-forest-800/50 p-3 rounded-lg border border-forest-700">
+                    <p class="text-xs text-forest-300 mb-1">Total Terkumpul (Lunas)</p>
+                    <p class="text-lg md:text-xl font-bold text-emerald-400" id="stat-terkumpul">Rp 0</p>
+                </div>
+                <div class="bg-forest-800/50 p-3 rounded-lg border border-forest-700 col-span-2 md:col-span-1">
+                    <p class="text-xs text-forest-300 mb-1">Sisa Belum Bayar</p>
+                    <p class="text-lg md:text-xl font-bold text-orange-400" id="stat-sisa">Rp 0</p>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 py-6">
+        <div id="participants-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <!-- Cards will be rendered here by JS -->
+        </div>
+    </main>
+
+    <!-- Modal: Kelola List Sewa -->
+    <div id="modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm hidden z-50 flex items-center justify-center p-4 opacity-0 transition-opacity duration-300">
+        <div class="bg-forest-900 border border-forest-700 rounded-xl w-full max-w-md shadow-2xl flex flex-col max-h-[90vh]">
+            <div class="p-4 border-b border-forest-800 flex justify-between items-center bg-forest-800/50 rounded-t-xl">
+                <div>
+                    <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                        <i data-lucide="shopping-cart" class="w-5 h-5 text-forest-400"></i> Pinjam Barang
+                    </h2>
+                    <p class="text-sm text-forest-300" id="modal-user-name">Nama Peserta</p>
+                </div>
+                <button onclick="closeModal()" class="text-forest-400 hover:text-white p-1">
+                    <i data-lucide="x" class="w-6 h-6"></i>
+                </button>
+            </div>
+
+            <!-- Add Item Form -->
+            <div class="p-4 border-b border-forest-800 bg-forest-950/30">
+                <div class="grid grid-cols-1 gap-3">
+                    <div>
+                        <label class="block text-xs text-forest-300 mb-1">Kategori</label>
+                        <select id="cat-select" class="w-full bg-forest-800 border border-forest-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-forest-500" onchange="populateItems()">
+                            <option value="">-- Pilih Kategori --</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs text-forest-300 mb-1">Barang</label>
+                        <select id="item-select" class="w-full bg-forest-800 border border-forest-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-forest-500">
+                            <option value="">-- Pilih Barang --</option>
+                        </select>
+                    </div>
+                    <div class="flex gap-3">
+                        <div class="w-1/3">
+                            <label class="block text-xs text-forest-300 mb-1">Jumlah</label>
+                            <input type="number" id="qty-input" min="1" value="1" class="w-full bg-forest-800 border border-forest-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-forest-500">
+                        </div>
+                        <div class="w-2/3 flex items-end">
+                            <button onclick="addItem()" class="w-full bg-forest-600 hover:bg-forest-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2">
+                                <i data-lucide="plus" class="w-4 h-4"></i> Pinjam
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- List User's Items -->
+            <div class="p-4 overflow-y-auto hide-scroll flex-1">
+                <h3 class="text-xs font-semibold text-forest-400 uppercase tracking-wider mb-3">Barang yang Dipinjam</h3>
+                <ul id="modal-items-list" class="space-y-2">
+                    <!-- Items rendered here -->
+                </ul>
+            </div>
+
+            <div class="p-4 border-t border-forest-800 bg-forest-800/50 rounded-b-xl flex justify-between items-center">
+                <span class="text-sm text-forest-300">Total Tagihan:</span>
+                <span class="font-bold text-lg text-white" id="modal-total-price">Rp 0</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Kelola Inventory -->
+    <div id="inventory-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm hidden z-50 flex items-center justify-center p-4 opacity-0 transition-opacity duration-300">
+        <div class="bg-forest-900 border border-forest-700 rounded-xl w-full max-w-lg shadow-2xl flex flex-col max-h-[90vh]">
+            <div class="p-4 border-b border-forest-800 flex justify-between items-center bg-forest-800/50 rounded-t-xl">
+                <div>
+                    <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                        <i data-lucide="settings" class="w-5 h-5 text-forest-400"></i> Kelola Daftar Barang
+                    </h2>
+                    <p class="text-sm text-forest-300">Ubah harga atau tambah barang baru</p>
+                </div>
+                <button onclick="closeInventoryModal()" class="text-forest-400 hover:text-white p-1">
+                    <i data-lucide="x" class="w-6 h-6"></i>
+                </button>
+            </div>
+
+            <div class="p-4 border-b border-forest-800 bg-forest-950/30">
+                <label class="block text-xs text-forest-300 mb-1">Kategori Barang</label>
+                <select id="inv-cat-select" onchange="renderInventoryItems()" class="w-full bg-forest-800 border border-forest-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-forest-500">
+                    <!-- Filled dynamically -->
+                </select>
+            </div>
+
+            <div class="p-4 overflow-y-auto hide-scroll flex-1">
+                <div id="inv-items-list" class="space-y-3">
+                    <!-- Listed items for editing -->
+                </div>
+            </div>
+
+            <!-- Tambah Barang Baru -->
+            <div class="p-4 border-t border-forest-800 bg-forest-800/50 rounded-b-xl">
+                <h3 class="text-xs font-semibold text-forest-400 uppercase tracking-wider mb-2">Tambah Barang Baru</h3>
+                <div class="flex gap-2">
+                    <input type="text" id="new-inv-name" placeholder="Nama Barang" class="w-1/2 bg-forest-900 border border-forest-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-forest-500">
+                    <input type="number" id="new-inv-price" placeholder="Harga (Rp)" class="w-1/4 bg-forest-900 border border-forest-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-forest-500">
+                    <button onclick="addInventoryItem()" class="w-1/4 bg-forest-600 hover:bg-forest-500 text-white rounded-lg text-sm font-medium transition-colors">
+                        Simpan
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Login Admin -->
+    <div id="login-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm hidden z-50 flex items-center justify-center p-4 opacity-0 transition-opacity duration-300">
+        <div class="bg-forest-900 border border-forest-700 rounded-xl w-full max-w-xs shadow-2xl p-6 relative">
+            <button onclick="closeLoginModal()" class="absolute top-4 right-4 text-forest-400 hover:text-white">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+            <h2 class="text-xl font-bold text-white flex items-center gap-2 mb-4">
+                <i data-lucide="shield" class="w-5 h-5 text-forest-400"></i> Login Admin
+            </h2>
+            <div class="mb-4">
+                <label class="block text-xs text-forest-300 mb-1">Password</label>
+                <input type="password" id="admin-password" class="w-full bg-forest-800 border border-forest-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-forest-500" placeholder="Masukkan password admin">
+                <p id="login-error" class="text-red-400 text-xs mt-1 hidden">Password salah!</p>
+            </div>
+            <button onclick="doLogin()" class="w-full bg-forest-600 hover:bg-forest-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2">
+                Login
+            </button>
+        </div>
+    </div>
+
+    <!-- Modal: Tambah Peserta -->
+    <div id="participant-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm hidden z-50 flex items-center justify-center p-4 opacity-0 transition-opacity duration-300">
+        <div class="bg-forest-900 border border-forest-700 rounded-xl w-full max-w-xs shadow-2xl p-6 relative">
+            <button onclick="closeParticipantModal()" class="absolute top-4 right-4 text-forest-400 hover:text-white">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+            <h2 class="text-xl font-bold text-white flex items-center gap-2 mb-4">
+                <i data-lucide="user-plus" class="w-5 h-5 text-forest-400"></i> Tambah Peserta
+            </h2>
+            <div class="mb-4">
+                <label class="block text-xs text-forest-300 mb-1">Nama</label>
+                <input type="text" id="new-participant-name" class="w-full bg-forest-800 border border-forest-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-forest-500" placeholder="Nama peserta baru">
+            </div>
+            <button onclick="addParticipant()" class="w-full bg-forest-600 hover:bg-forest-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2">
+                Tambah
+            </button>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-forest-700 text-white px-4 py-3 rounded-lg shadow-xl flex items-center gap-3 transition-all duration-300 transform translate-y-20 opacity-0 z-50">
+        <i data-lucide="info" class="w-5 h-5 text-forest-300" id="toast-icon"></i>
+        <span id="toast-msg" class="text-sm font-medium">Message here</span>
+    </div>
+
+    <script>
+        // --- STATE ---
+        let inventory = {};
+        let state = {
+            participants: [],
+            currentUserId: null
+        };
+        let isAdmin = false;
+        let token = localStorage.getItem('camprent_admin_token') || null;
+
+        // --- UTILS ---
+        const formatRupiah = (number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(number);
+
+        function showToast(msg, isError = false) {
+            const toast = document.getElementById('toast');
+            const icon = document.getElementById('toast-icon');
+            document.getElementById('toast-msg').innerText = msg;
+            
+            if (isError) {
+                toast.classList.replace('bg-forest-700', 'bg-red-800');
+                icon.setAttribute('data-lucide', 'alert-circle');
+                icon.classList.replace('text-forest-300', 'text-white');
+            } else {
+                toast.classList.replace('bg-red-800', 'bg-forest-700');
+                icon.setAttribute('data-lucide', 'check-circle');
+                icon.classList.replace('text-white', 'text-emerald-400');
+            }
+            lucide.createIcons();
+
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            setTimeout(() => {
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 3000);
+        }
+
+        // --- API CALLS ---
+        async function fetchState() {
+            try {
+                const res = await fetch('/api/data');
+                const data = await res.json();
+                inventory = data.inventory || {};
+                state.participants = data.participants || [];
+                
+                document.getElementById('loader').classList.add('opacity-0');
+                setTimeout(() => document.getElementById('loader').classList.add('hidden'), 300);
+
+                checkAdminStatus();
+                initModalSelects();
+                initInventoryModalSelects();
+                renderDashboard();
+            } catch (error) {
+                console.error("Error fetching data:", error);
+                showToast("Gagal memuat data dari server!", true);
+            }
+        }
+
+        async function saveToServer() {
+            if (!isAdmin) return; // Silent return, should only be called if admin
+            
+            try {
+                const res = await fetch('/api/data', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ inventory, participants: state.participants })
+                });
+
+                if (res.status === 401 || res.status === 403) {
+                    showToast("Sesi habis, silakan login ulang", true);
+                    logoutAdmin();
+                    return;
+                }
+
+                if (!res.ok) throw new Error("Gagal menyimpan");
+            } catch (error) {
+                console.error(error);
+                showToast("Gagal menyimpan data!", true);
+            }
+        }
+
+        async function saveRentalsToServer(userId, rentals) {
+            try {
+                const res = await fetch('/api/update-rentals', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userId, rentals })
+                });
+                if (!res.ok) throw new Error("Gagal menyimpan pinjaman");
+            } catch (error) {
+                console.error(error);
+                showToast("Gagal menyinkronkan barang pinjaman!", true);
+            }
+        }
+
+        // --- AUTH LOGIC ---
+        function checkAdminStatus() {
+            if (token) {
+                isAdmin = true;
+                document.getElementById('btn-login').classList.add('hidden');
+                document.getElementById('btn-logout').classList.remove('hidden');
+                document.querySelectorAll('.admin-only').forEach(el => el.classList.remove('hidden'));
+            } else {
+                isAdmin = false;
+                document.getElementById('btn-login').classList.remove('hidden');
+                document.getElementById('btn-logout').classList.add('hidden');
+                document.querySelectorAll('.admin-only').forEach(el => el.classList.add('hidden'));
+            }
+            renderDashboard(); // Re-render to show/hide buttons
+        }
+
+        function openLoginModal() {
+            document.getElementById('login-modal').classList.remove('hidden');
+            setTimeout(() => document.getElementById('login-modal').classList.remove('opacity-0'), 10);
+            document.getElementById('admin-password').focus();
+        }
+
+        function closeLoginModal() {
+            document.getElementById('login-modal').classList.add('opacity-0');
+            setTimeout(() => document.getElementById('login-modal').classList.add('hidden'), 300);
+            document.getElementById('login-error').classList.add('hidden');
+            document.getElementById('admin-password').value = '';
+        }
+
+        async function doLogin() {
+            const password = document.getElementById('admin-password').value;
+            try {
+                const res = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ password })
+                });
+
+                const data = await res.json();
+                if (data.success) {
+                    token = data.token;
+                    localStorage.setItem('camprent_admin_token', token);
+                    closeLoginModal();
+                    checkAdminStatus();
+                    showToast("Berhasil login sebagai Admin");
+                } else {
+                    document.getElementById('login-error').classList.remove('hidden');
+                }
+            } catch (e) {
+                showToast("Terjadi kesalahan koneksi", true);
+            }
+        }
+
+        function logoutAdmin() {
+            token = null;
+            localStorage.removeItem('camprent_admin_token');
+            checkAdminStatus();
+            showToast("Berhasil keluar dari mode Admin");
+        }
+
+        // --- INVENTORY MANAGEMENT (NEW) ---
+        function initInventoryModalSelects() {
+            const catSelect = document.getElementById('inv-cat-select');
+            catSelect.innerHTML = '';
+            Object.keys(inventory).forEach(cat => {
+                catSelect.innerHTML += `<option value="${cat}">${cat}</option>`;
+            });
+            if (Object.keys(inventory).length > 0) {
+                renderInventoryItems();
+            }
+        }
+
+        function openInventoryModal() {
+            if (!isAdmin) return;
+            initInventoryModalSelects();
+            renderInventoryItems();
+            const modal = document.getElementById('inventory-modal');
+            modal.classList.remove('hidden');
+            setTimeout(() => modal.classList.remove('opacity-0'), 10);
+        }
+
+        function closeInventoryModal() {
+            const modal = document.getElementById('inventory-modal');
+            modal.classList.add('opacity-0');
+            setTimeout(() => modal.classList.add('hidden'), 300);
+            
+            // Sync any inventory changes with participant rentals so UI is accurate
+            // Update names/prices in state.participants
+            state.participants.forEach(p => {
+                p.rentals.forEach(r => {
+                    // find updated item in inventory
+                    for (let cat in inventory) {
+                        let invItem = inventory[cat].find(i => i.id === r.item.id);
+                        if (invItem) {
+                            r.item.name = invItem.name;
+                            r.item.price = invItem.price;
+                        }
+                    }
+                });
+            });
+            renderDashboard();
+            initModalSelects(); // Re-init the dropdowns for the rental modal
+        }
+
+        function renderInventoryItems() {
+            const cat = document.getElementById('inv-cat-select').value;
+            const list = document.getElementById('inv-items-list');
+            list.innerHTML = '';
+
+            if (cat && inventory[cat]) {
+                inventory[cat].forEach(item => {
+                    list.innerHTML += `
+                        <div class="flex items-center gap-2 bg-forest-950/50 p-3 rounded-lg border border-forest-800">
+                            <div class="flex-1">
+                                <input type="text" id="edit-name-${item.id}" value="${item.name}" class="w-full bg-transparent border-b border-forest-700 pb-1 text-sm text-white focus:outline-none focus:border-forest-500 mb-2">
+                                <input type="number" id="edit-price-${item.id}" value="${item.price}" class="w-full bg-transparent border-b border-forest-700 pb-1 text-sm text-forest-300 focus:outline-none focus:border-forest-500">
+                            </div>
+                            <div class="flex flex-col gap-2">
+                                <button onclick="updateInventoryItem('${cat}', '${item.id}')" class="bg-forest-700 hover:bg-forest-600 text-white p-2 rounded-lg transition" title="Simpan Perubahan">
+                                    <i data-lucide="save" class="w-4 h-4"></i>
+                                </button>
+                                <button onclick="deleteInventoryItem('${cat}', '${item.id}')" class="bg-red-900 hover:bg-red-800 text-red-300 p-2 rounded-lg transition" title="Hapus Barang">
+                                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+            lucide.createIcons();
+        }
+
+        async function updateInventoryItem(cat, id) {
+            if (!isAdmin) return;
+            const newName = document.getElementById(`edit-name-${id}`).value;
+            const newPrice = parseInt(document.getElementById(`edit-price-${id}`).value);
+
+            if (!newName || isNaN(newPrice)) {
+                showToast("Nama dan harga tidak boleh kosong!", true);
+                return;
+            }
+
+            const item = inventory[cat].find(i => i.id === id);
+            if (item) {
+                item.name = newName;
+                item.price = newPrice;
+                showToast(`Barang diupdate!`);
+                await saveToServer();
+            }
+        }
+
+        async function deleteInventoryItem(cat, id) {
+            if (!isAdmin) return;
+            if (confirm("Yakin ingin menghapus barang ini dari daftar katalog? (Ini tidak akan menghapus barang yang sudah terlanjur dipinjam peserta)")) {
+                inventory[cat] = inventory[cat].filter(i => i.id !== id);
+                renderInventoryItems();
+                showToast("Barang dihapus dari katalog.");
+                await saveToServer();
+            }
+        }
+
+        async function addInventoryItem() {
+            if (!isAdmin) return;
+            const cat = document.getElementById('inv-cat-select').value;
+            const nameInput = document.getElementById('new-inv-name');
+            const priceInput = document.getElementById('new-inv-price');
+            
+            const name = nameInput.value.trim();
+            const price = parseInt(priceInput.value);
+
+            if (!name || isNaN(price)) {
+                showToast("Nama dan harga harus diisi!", true);
+                return;
+            }
+
+            // Generate unique id
+            const id = 'item_' + Date.now().toString(36);
+            inventory[cat].push({ id, name, price });
+
+            nameInput.value = '';
+            priceInput.value = '';
+
+            renderInventoryItems();
+            showToast("Barang baru ditambahkan!");
+            await saveToServer();
+        }
+
+
+        // --- PARTICIPANT MANAGEMENT ---
+        function openParticipantModal() {
+            document.getElementById('participant-modal').classList.remove('hidden');
+            setTimeout(() => document.getElementById('participant-modal').classList.remove('opacity-0'), 10);
+            document.getElementById('new-participant-name').focus();
+        }
+
+        function closeParticipantModal() {
+            document.getElementById('participant-modal').classList.add('opacity-0');
+            setTimeout(() => document.getElementById('participant-modal').classList.add('hidden'), 300);
+            document.getElementById('new-participant-name').value = '';
+        }
+
+        async function addParticipant() {
+            const name = document.getElementById('new-participant-name').value.trim();
+            if (!name) return;
+
+            const newId = state.participants.length > 0 ? Math.max(...state.participants.map(p => p.id)) + 1 : 1;
+            state.participants.push({
+                id: newId,
+                name: name,
+                rentals: [],
+                isPaid: false
+            });
+
+            closeParticipantModal();
+            renderDashboard();
+            await saveToServer();
+            showToast(`Peserta ${name} berhasil ditambahkan!`);
+        }
+
+        async function deleteParticipant(id) {
+            if (!isAdmin) return;
+            if (confirm("Apakah Anda yakin ingin menghapus peserta ini?")) {
+                state.participants = state.participants.filter(p => p.id !== id);
+                renderDashboard();
+                await saveToServer();
+                showToast("Peserta dihapus.");
+            }
+        }
+
+        // --- DASHBOARD ---
+        function renderDashboard() {
+            const grid = document.getElementById('participants-grid');
+            grid.innerHTML = '';
+
+            let globalTotal = 0;
+            let globalCollected = 0;
+
+            if (state.participants.length === 0) {
+                grid.innerHTML = `<div class="col-span-full py-10 text-center text-forest-400">Belum ada peserta. ${isAdmin ? 'Silakan tambah peserta.' : ''}</div>`;
+            }
+
+            state.participants.forEach(p => {
+                let userTotal = p.rentals.reduce((sum, r) => sum + (r.item.price * r.qty), 0);
+                globalTotal += userTotal;
+                if (p.isPaid) globalCollected += userTotal;
+
+                let itemsHtml = '';
+                if (p.rentals.length === 0) {
+                    itemsHtml = `<p class="text-xs text-forest-400 italic">Belum ada barang disewa</p>`;
+                } else {
+                    itemsHtml = `<ul class="text-sm space-y-1 mt-2">`;
+                    p.rentals.slice(0, 3).forEach(r => {
+                        itemsHtml += `<li class="flex justify-between text-slate-300">
+                            <span class="truncate pr-2">- ${r.item.name} <span class="text-forest-400">x${r.qty}</span></span>
+                            <span>${(r.item.price * r.qty / 1000)}k</span>
+                        </li>`;
+                    });
+                    if (p.rentals.length > 3) {
+                        itemsHtml += `<li class="text-xs text-forest-400 italic">+ ${p.rentals.length - 3} barang lainnya...</li>`;
+                    }
+                    itemsHtml += `</ul>`;
+                }
+
+                const borderClass = p.isPaid ? 'border-emerald-500' : 'border-forest-700';
+                const bgClass = p.isPaid ? 'bg-forest-900' : 'bg-forest-800';
+                const adminClass = isAdmin ? '' : 'hidden';
+                const aturClass = (isAdmin || !p.isPaid) ? '' : 'hidden';
+
+                const cardHtml = `
+                    <div class="${bgClass} rounded-xl p-4 border ${borderClass} flex flex-col justify-between shadow-sm relative overflow-hidden group/card">
+                        ${p.isPaid ? '<div class="absolute -right-6 top-4 bg-emerald-500 text-white text-[10px] font-bold px-8 py-1 rotate-45 z-10">LUNAS</div>' : ''}
+                        
+                        <div>
+                            <div class="flex justify-between items-start mb-3">
+                                <h3 class="text-lg font-bold text-white flex items-center gap-2 pr-6">
+                                    <i data-lucide="user" class="w-4 h-4 text-forest-400 shrink-0"></i> 
+                                    <span class="truncate">${p.name}</span>
+                                </h3>
+                                
+                                <div class="flex items-center gap-2 relative z-10 shrink-0">
+                                    <button onclick="deleteParticipant(${p.id})" class="${adminClass} text-red-500/50 hover:text-red-400 opacity-0 group-hover/card:opacity-100 transition-opacity" title="Hapus">
+                                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                    </button>
+                                    
+                                    <label class="flex items-center cursor-pointer group ${adminClass}" title="Tandai Lunas">
+                                        <div class="relative">
+                                            <input type="checkbox" class="sr-only" ${p.isPaid ? 'checked' : ''} onchange="togglePaid(${p.id})">
+                                            <div class="block bg-forest-950 w-10 h-6 rounded-full border border-forest-600 transition group-hover:border-forest-400"></div>
+                                            <div class="dot absolute left-1 top-1 bg-forest-400 w-4 h-4 rounded-full transition transform ${p.isPaid ? 'translate-x-4 bg-emerald-400' : ''}"></div>
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <div class="min-h-[80px] bg-forest-950/40 p-2 rounded-lg border border-forest-800/50">
+                                ${itemsHtml}
+                            </div>
+                        </div>
+
+                        <div class="mt-4 pt-3 border-t border-forest-700/50 flex justify-between items-center">
+                            <div>
+                                <p class="text-[10px] text-forest-400 uppercase tracking-wider">Total</p>
+                                <p class="font-bold text-white">${formatRupiah(userTotal)}</p>
+                            </div>
+                            <button onclick="openModal(${p.id})" class="${aturClass} bg-forest-700 hover:bg-forest-600 text-white px-3 py-1.5 rounded-lg text-sm flex items-center gap-1 transition-colors">
+                                <i data-lucide="edit-3" class="w-4 h-4"></i> Atur
+                            </button>
+                        </div>
+                    </div>
+                `;
+                grid.insertAdjacentHTML('beforeend', cardHtml);
+            });
+
+            document.getElementById('stat-total').innerText = formatRupiah(globalTotal);
+            document.getElementById('stat-terkumpul').innerText = formatRupiah(globalCollected);
+            document.getElementById('stat-sisa').innerText = formatRupiah(globalTotal - globalCollected);
+            lucide.createIcons();
+        }
+
+        // --- MANAGING RENTALS (ADMIN ONLY) ---
+        function initModalSelects() {
+            const catSelect = document.getElementById('cat-select');
+            catSelect.innerHTML = '<option value="">-- Pilih Kategori --</option>';
+            Object.keys(inventory).forEach(cat => {
+                catSelect.innerHTML += `<option value="${cat}">${cat}</option>`;
+            });
+        }
+
+        function populateItems() {
+            const cat = document.getElementById('cat-select').value;
+            const itemSelect = document.getElementById('item-select');
+            itemSelect.innerHTML = '<option value="">-- Pilih Barang --</option>';
+
+            if (cat && inventory[cat]) {
+                inventory[cat].forEach(item => {
+                    itemSelect.innerHTML += `<option value="${item.id}">${item.name} (${formatRupiah(item.price)})</option>`;
+                });
+            }
+        }
+
+        function openModal(userId) {
+            state.currentUserId = userId;
+            const user = state.participants.find(p => p.id === userId);
+
+            document.getElementById('modal-user-name').innerText = user.name;
+            document.getElementById('cat-select').value = "";
+            document.getElementById('item-select').innerHTML = '<option value="">-- Pilih Barang --</option>';
+            document.getElementById('qty-input').value = 1;
+
+            renderModalItems();
+            const modal = document.getElementById('modal');
+            modal.classList.remove('hidden');
+            setTimeout(() => modal.classList.remove('opacity-0'), 10);
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('modal');
+            modal.classList.add('opacity-0');
+            setTimeout(() => modal.classList.add('hidden'), 300);
+            state.currentUserId = null;
+        }
+
+        function renderModalItems() {
+            const user = state.participants.find(p => p.id === state.currentUserId);
+            const list = document.getElementById('modal-items-list');
+            list.innerHTML = '';
+            let total = 0;
+
+            if (user.rentals.length === 0) {
+                list.innerHTML = `<li class="text-center text-sm text-forest-400 py-4 bg-forest-950/30 rounded-lg border border-forest-800 border-dashed">Belum ada pinjaman</li>`;
+            } else {
+                user.rentals.forEach((r, index) => {
+                    const subtotal = r.item.price * r.qty;
+                    total += subtotal;
+                    list.innerHTML += `
+                        <li class="flex justify-between items-center bg-forest-950/50 p-3 rounded-lg border border-forest-800">
+                            <div>
+                                <p class="text-sm font-medium text-white">${r.item.name}</p>
+                                <p class="text-xs text-forest-400">${formatRupiah(r.item.price)} x ${r.qty} = <span class="text-emerald-400 font-semibold">${formatRupiah(subtotal)}</span></p>
+                            </div>
+                            <button onclick="removeItem(${index})" class="text-red-400 hover:text-red-300 p-2 bg-red-400/10 hover:bg-red-400/20 rounded-lg transition">
+                                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                            </button>
+                        </li>
+                    `;
+                });
+            }
+
+            document.getElementById('modal-total-price').innerText = formatRupiah(total);
+            lucide.createIcons();
+            renderDashboard(); 
+        }
+
+        async function addItem() {
+            const cat = document.getElementById('cat-select').value;
+            const itemId = document.getElementById('item-select').value;
+            const qty = parseInt(document.getElementById('qty-input').value);
+
+            if (!cat || !itemId || isNaN(qty) || qty < 1) {
+                showToast("Pilih barang dan jumlah!", true);
+                return;
+            }
+
+            const itemObj = inventory[cat].find(i => i.id === itemId);
+            const user = state.participants.find(p => p.id === state.currentUserId);
+
+            const existingItem = user.rentals.find(r => r.item.id === itemId);
+            if (existingItem) {
+                existingItem.qty += qty;
+                existingItem.item.name = itemObj.name;
+                existingItem.item.price = itemObj.price;
+            } else {
+                user.rentals.push({ item: { ...itemObj }, qty: qty });
+            }
+
+            document.getElementById('qty-input').value = 1;
+            document.getElementById('item-select').value = "";
+            renderModalItems();
+            
+            if (isAdmin) {
+                await saveToServer();
+            } else {
+                await saveRentalsToServer(user.id, user.rentals);
+            }
+        }
+
+        async function removeItem(index) {
+            const user = state.participants.find(p => p.id === state.currentUserId);
+            user.rentals.splice(index, 1);
+            renderModalItems();
+            
+            if (isAdmin) {
+                await saveToServer();
+            } else {
+                await saveRentalsToServer(user.id, user.rentals);
+            }
+        }
+
+        async function togglePaid(userId) {
+            if (!isAdmin) return;
+            const user = state.participants.find(p => p.id === userId);
+            user.isPaid = !user.isPaid;
+            renderDashboard();
+            await saveToServer();
+        }
+
+        // --- EXPORT LOGIC ---
+        function exportToWA() {
+            let text = "*🏕️ REKAPAN SEWA ALAT GUNUNG*\n\n";
+            let globalTotal = 0;
+            let globalCollected = 0;
+            let hasData = false;
+            let groupTotal = 0;
+            let numPersons = state.participants.filter(p => !p.name.toUpperCase().includes("KELOMPOK")).length;
+
+            state.participants.forEach(p => {
+                let userTotal = p.rentals.reduce((sum, r) => sum + (r.item.price * r.qty), 0);
+                if (p.name.toUpperCase().includes("KELOMPOK")) groupTotal = userTotal;
+
+                if (userTotal > 0 || p.rentals.length > 0) {
+                    hasData = true;
+                    text += `👤 *${p.name}* ${p.isPaid ? '(✅ LUNAS)' : '(❌ BELUM)'}\n`;
+                    p.rentals.forEach(r => {
+                        text += `  - ${r.item.name} [x${r.qty}] : Rp ${(r.item.price * r.qty).toLocaleString('id-ID')}\n`;
+                    });
+                    text += `  *Total: Rp ${userTotal.toLocaleString('id-ID')}*\n\n`;
+                    globalTotal += userTotal;
+                    if (p.isPaid) globalCollected += userTotal;
+                }
+            });
+
+            if (!hasData) return showToast("Belum ada data persewaan!", true);
+
+            text += `➖➖➖➖➖➖➖➖➖➖\n`;
+            if (groupTotal > 0 && numPersons > 0) {
+                let splitCost = Math.ceil(groupTotal / numPersons);
+                text += `*⛺ TOTAL KELOMPOK: Rp ${groupTotal.toLocaleString('id-ID')}*\n`;
+                text += `*💸 PATUNGAN/ORANG: Rp ${splitCost.toLocaleString('id-ID')} (${numPersons} org)*\n`;
+                text += `➖➖➖➖➖➖➖➖➖➖\n`;
+            }
+            text += `*💰 TOTAL KESELURUHAN: Rp ${globalTotal.toLocaleString('id-ID')}*\n`;
+            text += `*✅ TOTAL TERKUMPUL: Rp ${globalCollected.toLocaleString('id-ID')}*\n`;
+            text += `*🛑 SISA TAGIHAN: Rp ${(globalTotal - globalCollected).toLocaleString('id-ID')}*\n`;
+
+            const el = document.createElement('textarea');
+            el.value = text;
+            document.body.appendChild(el);
+            el.select();
+            document.execCommand('copy');
+            document.body.removeChild(el);
+
+            showToast("Rekapan di-copy! Silakan paste di WhatsApp.");
+        }
+
+        // Initialization
+        window.onload = () => {
+            fetchState();
+            lucide.createIcons();
+        };
+
+        // Listen for enter on login form
+        document.getElementById('admin-password').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') doLogin();
+        });
+        document.getElementById('new-participant-name').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') addParticipant();
+        });
+        document.getElementById('new-inv-price').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') addInventoryItem();
+        });
+    </script>
+</body>
+</html>
