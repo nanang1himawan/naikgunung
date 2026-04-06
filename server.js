@@ -1,34 +1,55 @@
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const fs = require('fs');
 const path = require('path');
 const jwt = require('jsonwebtoken');
+const { createClient } = require('redis');
 
 const app = express();
 const PORT = 3000;
 const DB_FILE = path.join(__dirname, 'data', 'db.json');
-const SECRET_KEY = 'kamprent_admin_secret_123';
-const ADMIN_PASSWORD = '21436587admin'; // Sangat simple, password admin
+const SECRET_KEY = process.env.JWT_SECRET || 'kamprent_admin_secret_123';
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || '21436587admin';
+
+// Init Redis
+const client = createClient({
+    url: process.env.REDIS_URL
+});
+client.on('error', (err) => console.log('Redis Client Error', err));
 
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Helper to read DB
-const readDB = () => {
+// Helper to read DB (Async for Redis)
+const readDB = async () => {
     try {
-        const data = fs.readFileSync(DB_FILE, 'utf8');
-        return JSON.parse(data);
+        const rawData = await client.get('camprent_data');
+        if (rawData) {
+            return JSON.parse(rawData);
+        } else {
+            console.log("Redis kosong, membaca data awal dari db.json...");
+            const data = fs.readFileSync(DB_FILE, 'utf8');
+            const parsed = JSON.parse(data);
+            await client.set('camprent_data', JSON.stringify(parsed));
+            return parsed;
+        }
     } catch (error) {
         console.error("Error reading DB:", error);
         return { inventory: {}, participants: [] };
     }
 };
 
-// Helper to write DB
-const writeDB = (data) => {
+// Helper to write DB (Async for Redis)
+const writeDB = async (data) => {
     try {
-        fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2), 'utf8');
+        await client.set('camprent_data', JSON.stringify(data));
+        
+        // Tetap tulis ke db.json untuk backup jika server lokal
+        if(fs.existsSync(DB_FILE)) {
+             fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2), 'utf8');
+        }
     } catch (error) {
         console.error("Error writing DB:", error);
     }
@@ -56,8 +77,8 @@ const verifyAdmin = (req, res, next) => {
 // --- API ENDPOINTS ---
 
 // 1. GET DATA (Public) - All users can view
-app.get('/api/data', (req, res) => {
-    const data = readDB();
+app.get('/api/data', async (req, res) => {
+    const data = await readDB();
     res.json(data);
 });
 
@@ -73,16 +94,16 @@ app.post('/api/login', (req, res) => {
 });
 
 // 3. SAVE ENTIRE STATE (Admin Only) - Inventory, new participants, lunas, dll.
-app.post('/api/data', verifyAdmin, (req, res) => {
+app.post('/api/data', verifyAdmin, async (req, res) => {
     const newData = req.body; // Expects { inventory, participants }
-    writeDB(newData);
+    await writeDB(newData);
     res.json({ success: true, message: 'Data saved successfully' });
 });
 
 // 4. UPDATE RENTALS (Public) - Allow users to add/remove their rented items
-app.post('/api/update-rentals', (req, res) => {
+app.post('/api/update-rentals', async (req, res) => {
     const { userId, rentals } = req.body;
-    const data = readDB();
+    const data = await readDB();
     
     const userIndex = data.participants.findIndex(p => p.id === userId);
     if (userIndex !== -1) {
@@ -91,13 +112,17 @@ app.post('/api/update-rentals', (req, res) => {
             return res.status(403).json({ success: false, error: 'Peserta sudah lunas, barang tidak dapat diubah oleh publik.' });
         }
         data.participants[userIndex].rentals = rentals;
-        writeDB(data);
+        await writeDB(data);
         res.json({ success: true });
     } else {
         res.status(404).json({ success: false, error: 'User not found' });
     }
 });
 
-app.listen(PORT, () => {
-    console.log(`Server is running on http://localhost:${PORT}`);
-});
+// Start server setelah connect Redis
+client.connect().then(() => {
+    console.log("Connected to Redis!");
+    app.listen(PORT, () => {
+        console.log(`Server is running on http://localhost:${PORT}`);
+    });
+}).catch(console.error);
