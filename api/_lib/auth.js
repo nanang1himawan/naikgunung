@@ -1,3 +1,10 @@
+const path = require('path');
+
+// Load .env file jika tersedia
+try {
+    require('dotenv').config({ path: path.join(__dirname, '..', '..', '.env') });
+} catch (e) {}
+
 const jwt = require('jsonwebtoken');
 
 const SECRET_KEY = process.env.JWT_SECRET || 'kamprent_admin_secret_123';
